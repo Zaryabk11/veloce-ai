@@ -1,0 +1,35 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model ProjectBrief {
+  id          String      @id @default(cuid())
+  title       String
+  description String
+  budgetRange String
+  timeline    String
+  contactInfo String
+  source      String      @default("web_form") // e.g., "web_form", "webhook"
+  createdAt   DateTime    @default(now())
+  
+  // Link to AI Analysis
+  analysis    AIAnalysis?
+}
+
+model AIAnalysis {
+  id             String       @id @default(cuid())
+  features       String[]     // Array of extracted features
+  category       String       // Web App, Mobile, AI/ML, etc.
+  estimatedHours String       // e.g., "40-60"
+  techStack      String[]     // Suggested stack
+  complexity     Int          // 1-5 score
+  createdAt      DateTime     @default(now())
+
+  // Foreign Key relation
+  briefId        String       @unique
+  brief          ProjectBrief @relation(fields: [briefId], references: [id], onDelete: Cascade)
+}
