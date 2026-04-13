@@ -6,30 +6,100 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Role {
+  ADMIN
+  REVIEWER
+}
+
+enum Stage {
+  NEW
+  UNDER_REVIEW
+  PROPOSAL_SENT
+  WON
+  ARCHIVED
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  // Relations
+  briefId String
+  brief   ProjectBrief @relation(fields: [briefId], references: [id], onDelete: Cascade)
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+}
+
+model EventLog {
+  id        String   @id @default(cuid())
+  action    String // e.g., "STAGE_CHANGED", "BRIEF_ASSIGNED"
+  details   String? // e.g., "Moved from NEW to UNDER_REVIEW"
+  createdAt DateTime @default(now())
+
+  // Relations
+  briefId String
+  brief   ProjectBrief @relation(fields: [briefId], references: [id], onDelete: Cascade)
+
+  userId String? // Which user triggered the event (optional if system generated)
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String // Since we are using credentials auth (email/password)
+  role      Role     @default(REVIEWER)
+  createdAt DateTime @default(now())
+
+  // Relations
+  notes          Note[] // Notes authored by this user
+  assignedBriefs ProjectBrief[] // Briefs assigned to this Reviewer
+  eventLogs      EventLog[] // Actions performed by this user
+}
+
 model ProjectBrief {
-  id          String      @id @default(cuid())
+  id          String @id @default(cuid())
   title       String
   description String
   budgetRange String
   timeline    String
   contactInfo String
-  source      String      @default("web_form") // e.g., "web_form", "webhook"
-  createdAt   DateTime    @default(now())
-  
-  // Link to AI Analysis
-  analysis    AIAnalysis?
+  source      String @default("web_form")
+
+  // Pipeline State
+  stage Stage @default(NEW)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  analysis  AIAnalysis?
+  notes     Note[]
+  eventLogs EventLog[]
+
+  // Assignment (Optional, an Admin assigns it to a Reviewer)
+  assigneeId String?
+  assignee   User?   @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
 }
 
 model AIAnalysis {
-  id             String       @id @default(cuid())
-  features       String[]     // Array of extracted features
-  category       String       // Web App, Mobile, AI/ML, etc.
-  estimatedHours String       // e.g., "40-60"
-  techStack      String[]     // Suggested stack
-  complexity     Int          // 1-5 score
-  createdAt      DateTime     @default(now())
+  id             String   @id @default(cuid())
+  features       String[]
+  category       String
+  estimatedHours String
+  techStack      String[]
+  complexity     Int
 
-  // Foreign Key relation
-  briefId        String       @unique
-  brief          ProjectBrief @relation(fields: [briefId], references: [id], onDelete: Cascade)
+  // Reviewer Override Fields
+  overrideHours  String? // If a reviewer changes the AI estimate
+  overrideReason String? // Required explanation if estimate is changed
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  briefId String       @unique
+  brief   ProjectBrief @relation(fields: [briefId], references: [id], onDelete: Cascade)
 }
