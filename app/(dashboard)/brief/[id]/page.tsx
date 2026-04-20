@@ -2,13 +2,21 @@ import DetailHeader from "@/app/components/brief/DetailHeader";
 import EventTimeline from "@/app/components/brief/EventTimeline";
 import NotesThread from "@/app/components/brief/NotesThread";
 import SideBySideView from "@/app/components/brief/SidebySideView";
-import {prisma} from "@/lib/prisma";
+import { getTeamMembers } from "@/lib/actions/users.actions";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
 import { notFound } from "next/navigation";
 
 
 export default async function BriefDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   // 1. Fetch EVERYTHING related to this brief in one query
+
+  const session = await getServerSession(authOptions);
+  const isAdmin = session?.user?.role === "ADMIN";
+  const teamMembers = isAdmin ? await getTeamMembers() : [];
+  
   const brief = await prisma.projectBrief.findUnique({
     where: { id },
     include: {
@@ -31,11 +39,11 @@ export default async function BriefDetailPage({ params }: { params: Promise<{ id
 
   return (
     <div className="max-w-7xl mx-auto h-full flex flex-col gap-6">
-      <DetailHeader brief={brief} />
+      <DetailHeader brief={brief} isAdmin={isAdmin} teamMembers={teamMembers} />
 
       {/* Grid Layout: Main content on left (2/3), Sidebar on right (1/3) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        
+
         {/* Left Column: The Data */}
         <div className="lg:col-span-2 space-y-6">
           <SideBySideView brief={brief} analysis={brief.analysis} />

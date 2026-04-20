@@ -1,6 +1,6 @@
 "use server";
 
-import {prisma} from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
@@ -32,5 +32,36 @@ export async function updateAIOverride(analysisId: string, briefId: string, hour
   ]);
 
   revalidatePath(`/brief/${briefId}`);
+  return { success: true };
+}
+
+// Add this inside lib/actions/brief.actions.ts
+export async function assignBrief(briefId: string, assigneeId: string | null) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user || session.user.role !== "ADMIN") {
+    throw new Error("Unauthorized: Only admins can assign briefs.");
+  }
+
+  // 1. Update the brief
+  const updatedBrief = await prisma.projectBrief.update({
+    where: { id: briefId },
+    data: { assigneeId },
+    include: { assignee: true } // Bring back the user data to log their name
+  });
+
+  // 2. Log the event
+  await prisma.eventLog.create({
+    data: {
+      action: "BRIEF_ASSIGNED",
+      details: assigneeId
+        ? `Assigned to ${updatedBrief.assignee?.name}`
+        : "Brief was unassigned",
+      briefId: briefId,
+      userId: session.user.id,
+    }
+  });
+
+  revalidatePath(`/brief/${briefId}`);
+  revalidatePath('/pipeline');
   return { success: true };
 }

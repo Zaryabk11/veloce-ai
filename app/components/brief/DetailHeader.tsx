@@ -1,4 +1,6 @@
-export default function DetailHeader({ brief }: { brief: any }) {
+import AssigneeSelect from "./AssigneeSelect";
+
+export default function DetailHeader({ brief, isAdmin, teamMembers }: { brief: any, isAdmin: boolean, teamMembers: { id: string; name: string }[] }) {
     return (
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex justify-between items-start">
             <div>
@@ -12,9 +14,15 @@ export default function DetailHeader({ brief }: { brief: any }) {
                 <span className="bg-indigo-100 text-indigo-800 font-bold px-3 py-1 rounded-full text-sm">
                     {brief.stage.replace("_", " ")}
                 </span>
-                {brief.assignee && (
+                {isAdmin ? (
+                    <AssigneeSelect
+                        briefId={brief.id}
+                        currentAssigneeId={brief.assigneeId}
+                        teamMembers={teamMembers}
+                    />
+                ) : (
                     <span className="text-sm text-gray-500">
-                        Assigned to: <span className="font-medium text-gray-900">{brief.assignee.name}</span>
+                        Assigned to: <span className="font-medium text-gray-900">{brief.assignee?.name || "Unassigned"}</span>
                     </span>
                 )}
             </div>

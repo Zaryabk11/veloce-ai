@@ -4,6 +4,8 @@ import { useEffect, useState, useTransition } from "react";
 import { DndContext, closestCorners, DragEndEvent } from "@dnd-kit/core";
 import { updateBriefStage } from "@/lib/actions/pipeline.actions";
 import Column from "./Column";
+import { Router } from "next/router";
+import { useRouter } from "next/navigation";
 
 
 // Must exactly match your Prisma schema Stage enum
@@ -13,6 +15,23 @@ export default function Board({ initialBriefs }: { initialBriefs: any[] }) {
   const [briefs, setBriefs] = useState(initialBriefs);
   const [isPending, startTransition] = useTransition();
   const [isMounted, setIsMounted] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    setIsMounted(true);
+
+    // REAL-TIME POLLING: Silently refresh the page data every 5 seconds
+    const interval = setInterval(() => {
+      router.refresh();
+    }, 5000);
+
+    return () => clearInterval(interval); // Cleanup on unmount
+  }, [Router]);
+
+  // Keep your server data in sync with local state
+  useEffect(() => {
+    setBriefs(initialBriefs);
+  }, [initialBriefs]);
   useEffect(() => setIsMounted(true), []);
   if (!isMounted) return null; // Or return a loading spinner
 
