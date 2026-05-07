@@ -1,14 +1,12 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { DndContext, closestCorners, DragEndEvent } from "@dnd-kit/core";
+import PusherClient from "pusher-js";
 import { updateBriefStage } from "@/lib/actions/pipeline.actions";
 import Column from "./Column";
-import { Router } from "next/router";
-import { useRouter } from "next/navigation";
 
-
-// Must exactly match your Prisma schema Stage enum
 const STAGES = ["NEW", "UNDER_REVIEW", "PROPOSAL_SENT", "WON", "ARCHIVED"] as const;
 
 export default function Board({ initialBriefs }: { initialBriefs: any[] }) {
@@ -17,69 +15,77 @@ export default function Board({ initialBriefs }: { initialBriefs: any[] }) {
   const [isMounted, setIsMounted] = useState(false);
   const router = useRouter();
 
-  useEffect(() => {
-    setIsMounted(true);
-
-    // REAL-TIME POLLING: Silently refresh the page data every 5 seconds
-    const interval = setInterval(() => {
-      router.refresh();
-    }, 5000);
-
-    return () => clearInterval(interval); // Cleanup on unmount
-  }, [Router]);
-
-  // Keep your server data in sync with local state
+  // 1. Keep local state in sync with server data
+  // When router.refresh() runs, initialBriefs will change. This updates the UI.
   useEffect(() => {
     setBriefs(initialBriefs);
   }, [initialBriefs]);
-  useEffect(() => setIsMounted(true), []);
-  if (!isMounted) return null; // Or return a loading spinner
 
-  // The function that runs the moment you drop a card
+  // 2. Setup Pusher and Hydration check
+  useEffect(() => {
+    setIsMounted(true);
+
+    // Initialize the Pusher client
+    const pusher = new PusherClient(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
+      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+    });
+
+    // Subscribe to the channel we broadcasted to in our Server Action
+    const channel = pusher.subscribe("pipeline");
+
+    // When the event fires, tell Next.js to quietly re-fetch the Server Component
+    channel.bind("brief-updated", () => {
+      router.refresh();
+    });
+
+    // Clean up the connection if the user navigates away from the page
+    return () => {
+      pusher.unsubscribe("pipeline");
+    };
+  }, [router]);
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
-
-    // If dropped outside a column, do nothing
     if (!over) return;
 
     const briefId = active.id as string;
     const newStage = over.id as string;
 
-    // Find the brief we are dragging
     const activeBrief = briefs.find((b) => b.id === briefId);
     if (!activeBrief || activeBrief.stage === newStage) return;
 
-    // 1. Optimistic UI Update: Instantly snap the card to the new column
+    // Optimistic UI Update: Move the card instantly for a snappy feel
     setBriefs((prev) =>
       prev.map((brief) =>
         brief.id === briefId ? { ...brief, stage: newStage } : brief
       )
     );
 
-    // 2. Background Server Update: Save to database without blocking the UI
+    // Background Database Update
     startTransition(async () => {
       try {
         await updateBriefStage(briefId, newStage as any);
       } catch (error) {
-        // If the server fails, revert the card back to its original column
         console.error("Failed to update stage", error);
+        // If the server fails, revert back to the true server state
         setBriefs(initialBriefs);
       }
     });
   };
 
+  // Prevent DndKit from crashing during Server-Side Rendering
+  if (!isMounted) return null;
+
   return (
     <DndContext collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
       <div className="flex gap-6 h-full items-start">
         {STAGES.map((stage) => {
-          // Filter briefs that belong to this specific column
           const columnBriefs = briefs.filter((b) => b.stage === stage);
-
           return (
             <Column
               key={stage}
               id={stage}
-              title={stage.replace("_", " ")} // "UNDER_REVIEW" -> "UNDER REVIEW"
+              title={stage.replace("_", " ")}
               briefs={columnBriefs}
             />
           );

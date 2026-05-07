@@ -16,6 +16,5 @@ export const config = {
     "/pipeline/:path*", 
     "/brief/:path*", 
     "/analytics/:path*",
-    "/", // If your root is a dashboard view
   ],
 };

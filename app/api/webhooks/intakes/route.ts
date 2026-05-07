@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { intakePayloadSchema } from "@/lib/validations/intake";
 import { analyzeProjectBrief } from "@/lib/ai/analyze-brief";
 import { ratelimit } from "@/lib/redis"; // Assuming you export your Upstash ratelimit instance
+import { pusherServer } from "@/lib/pusher";
 
 // Helper to verify HMAC signature
 function verifySignature(payload: string, signature: string, secret: string) {
@@ -55,6 +56,10 @@ export async function POST(req: Request) {
                 complexity: aiResult.complexityScore,
                 briefId: projectBrief.id,
             },
+        });
+
+        await pusherServer.trigger("pipeline", "brief-updated", {
+            message: "New intake received",
         });
 
         // 7. Return success response

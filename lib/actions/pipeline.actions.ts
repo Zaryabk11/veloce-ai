@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { Stage } from "@prisma/client";
+import { pusherServer } from "../pusher";
 
 // 1. Fetch briefs based on User Role
 export async function getDashboardBriefs() {
@@ -53,6 +54,11 @@ export async function updateBriefStage(briefId: string, newStage: Stage) {
       }
     })
   ]);
+
+  await pusherServer.trigger("pipeline", "brief-updated", {
+    briefId: briefId,
+    newStage: newStage,
+  });
 
   // Tell Next.js to purge its cache so the UI updates immediately
   revalidatePath("/pipeline");
