@@ -1,36 +1,35 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# IntakeAI Pipeline Dashboard
+
+## Overview
+IntakeAI is a real-time, role-based Kanban dashboard designed to manage incoming project briefs and AI-generated effort estimates. Built with the Next.js App Router, it features seamless drag-and-drop stage management, threaded team collaboration, and live pipeline analytics.
+
+## Tech Stack
+- **Framework:** Next.js (App Router, Server Actions, Server/Client Components)
+- **Database:** PostgreSQL managed via Prisma ORM
+- **Authentication:** NextAuth.js (Credentials Provider)
+- **Real-Time Synchronization:** Pusher
+- **UI & Styling:** Tailwind CSS
+- **Drag & Drop:** `@dnd-kit`
+- **Data Visualization:** Recharts
+
+## Core Features
+- **Role-Based Access Control (RBAC):**
+  - **Admins:** Full access to assign briefs, view the entire pipeline, and access the analytics dashboard.
+  - **Reviewers:** Restricted view; can only see and interact with briefs explicitly assigned to them.
+- **Real-Time Kanban Board:** Drag and drop project cards across stages (New, Under Review, Proposal Sent, Won, Archived). Board state is instantly broadcasted to all active users via Pusher WebSockets without page reloads.
+- **Intelligent Brief Details:** Side-by-side comparison of the original client intake submission and the AI-generated complexity/stack estimates.
+- **Reviewer Overrides:** Authorized users can manually override AI estimates, which requires a mandatory justification reason.
+- **Collaboration & Audit Trails:** Threaded internal notes and an automated, chronological event timeline for every brief (logging stage changes, reassignments, and estimate overrides).
+- **Analytics Dashboard:** Real-time KPI tracking, win/conversion rates, and categorical breakdown charts (restricted to Admins).
 
 ## Getting Started
 
-First, run the development server:
+### 1. Prerequisites
+- Node.js 18.x or later
+- A running PostgreSQL database (local or cloud like Supabase/Neon)
+- A free [Pusher](https://pusher.com/) account for real-time WebSockets
 
+### 2. Installation
+Clone the repository and install dependencies:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+npm install
